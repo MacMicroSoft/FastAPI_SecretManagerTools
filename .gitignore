@@ -1,0 +1,4 @@
+/app/.env
+/alembic.ini
+/.venv/
+/migration/
