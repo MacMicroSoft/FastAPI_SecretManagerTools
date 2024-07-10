@@ -28,17 +28,44 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> Optional[models.User]:
+async def get_user_by_email_crud(db: AsyncSession, email: str) -> Optional[models.User]:
     result = await db.execute(select(models.User).where(models.User.email == email))
     return result.scalars().first()
 
 
-async def get_user_by_name(db: AsyncSession, username: str) -> Optional[models.User]:
+async def get_user_by_id_crud(db: AsyncSession, user_id: int) -> Optional[models.User]:
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    return result.scalars().first()
+
+
+async def get_user_by_name_crud(db: AsyncSession, username: str) -> Optional[models.User]:
     result = await db.execute(select(models.User).where(models.User.username == username))
     return result.scalars().first()
 
 
+async def delete_user_by_id_crud(db: AsyncSession, user_id: int) -> None:
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return None
+
+    await db.delete(user)
+    await db.commit()
+    return user
+
+
 async def create_user(db: AsyncSession, user: UserCreate) -> models.User:
+    """
+    Creates a new user in the database.
+
+    Args:
+        db (AsyncSession): AsyncSession instance to interact with the database.
+        user (UserCreate): UserCreate schema containing user details.
+
+    Returns:
+        models.User: Created user object.
+    """
     hashed_password = get_password_hash(user.hash_password)
     db_user = models.User(email=user.email, username=user.username, hash_password=hashed_password)
     db.add(db_user)

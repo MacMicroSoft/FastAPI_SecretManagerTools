@@ -1,5 +1,8 @@
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
+from itsdangerous import URLSafeTimedSerializer, BadTimeSignature,SignatureExpired
+from app.config import setting
+from pydantic import EmailStr
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

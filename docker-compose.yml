@@ -1,0 +1,47 @@
+version: '3.10'
+
+services:
+  fastapi:
+    volumes:
+      -
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+    depends_on:
+      - redis
+      - db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:2002182000@db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
+
+  redis:
+    container_name: redis
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    environment:
+      - REDIS_PORT=6379
+    volumes:
+      - redis:/data
+
+  db:
+    container_name: db
+    image: postgres:12
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  redis:
+    driver: local
+  pgdata:
+    driver: local
