@@ -1,5 +1,7 @@
+import os
 from pydantic_settings import BaseSettings
 from pathlib import Path
+import pytest
 
 
 class Settings(BaseSettings):
@@ -10,6 +12,7 @@ class Settings(BaseSettings):
     POSTGRESQL_USER: str
 
     SECRET_KEY: str
+    TEST_POSTGRESQL: str
     JWT_REFRESH_SECRET_KEY: str
     ALGORITHM: str
     TIMEOUT: int

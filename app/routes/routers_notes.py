@@ -3,14 +3,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from app.database import get_db
 from app.models.models import Note, User
 from app.shemas import NoteCreate, UserOut, NoteList, NoteShare, NoteResponse
 from app.crud.crud_notes import get_user_owner_notes, share_note_permission, \
     delete_note_by_id_crud, create_note_crud, get_notes_by_user_crud, update_note_crud, \
-    get_notes_by_permissions_from_crud, get_notes_by_permissions_to_crud
+    get_notes_by_permissions_from_crud, get_notes_by_permissions_to_crud, get_note_by_id_crud
 from app.routes.routes_users import get_current_active_user, http_bearer, get_current_user
 
 route_note = APIRouter(prefix="/note", tags=["Notes"], dependencies=[Depends(get_current_active_user)])
@@ -38,6 +38,7 @@ async def list_notes(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access these notes",
         )
+
     return await get_notes_by_user_crud(db, user_id)
 
 
@@ -54,22 +55,26 @@ async def share_note(
     return Response(status_code=status.HTTP_200_OK)
 
 
-@route_note.get("/shared/to/others/", response_model=List[NoteShare])
+@route_note.get("/shared/to/others/", response_model=List[NoteShare], status_code=status.HTTP_200_OK)
 async def list_shareable_notes_to(
         current_user: UserOut = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db)
 ):
     user_id = current_user.id
-    return await get_notes_by_permissions_to_crud(db, user_id)
+    await get_notes_by_permissions_to_crud(db, user_id)
+
+    return Response(status_code=status.HTTP_200_OK)
 
 
-@route_note.get("/shared/from/others/", response_model=List[NoteShare])
+@route_note.get("/shared/from/others/", response_model=List[NoteShare], status_code=status.HTTP_200_OK)
 async def list_shareable_notes_from(
         current_user: UserOut = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db)
 ):
     user_id = current_user.id
-    return await get_notes_by_permissions_from_crud(db, user_id)
+    await get_notes_by_permissions_from_crud(db, user_id)
+
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @route_note.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -79,24 +84,31 @@ async def delete_note_by_id(
         db: AsyncSession = Depends(get_db)
 ):
     note = await delete_note_by_id_crud(db, note_id=note_id, user_id=current_user.id)
-    if note:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    else:
+    if note is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Note not found or does not belong to the user"
         )
 
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 @route_note.put("/{note_id}", response_model=NoteCreate, status_code=status.HTTP_200_OK)
 async def update_note(
         note_id: int,
-        title: str,
-        content: str,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
         current_user: UserOut = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db)
 ):
-    await update_note_crud(db, note_id, title, content, current_user.id)
+    current_note = await get_note_by_id_crud(db, note_id=note_id)
+    if not current_note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
 
-    return Response(status_code=status.HTTP_200_OK)
+    updated_title = title if title is not None else current_note.title
+    updated_content = content if content is not None else current_note.content
+
+    updated_note = await update_note_crud(db, note_id, updated_title, updated_content, current_user.id)
+
+    return updated_note

@@ -55,19 +55,16 @@ async def delete_user_by_id_crud(db: AsyncSession, user_id: int) -> None:
     return user
 
 
+# async def get_role_id_by_name(db: AsyncSession, name: str) -> Optional[int]:
+#     result = await db.execute(select(models.Role).where(models.Role.name == name))
+#     role_id = await result.scalar_one_or_none()
+#     return role_id
+
+
 async def create_user(db: AsyncSession, user: UserCreate) -> models.User:
-    """
-    Creates a new user in the database.
-
-    Args:
-        db (AsyncSession): AsyncSession instance to interact with the database.
-        user (UserCreate): UserCreate schema containing user details.
-
-    Returns:
-        models.User: Created user object.
-    """
     hashed_password = get_password_hash(user.hash_password)
     db_user = models.User(email=user.email, username=user.username, hash_password=hashed_password)
+
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)

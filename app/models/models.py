@@ -1,15 +1,11 @@
 import uuid
-
-from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, create_engine, JSON, TIMESTAMP, Boolean
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship, declarative_base, sessionmaker
 from sqlalchemy.sql import func
-from fastapi import Depends, FastAPI
-from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 Base = declarative_base()
-
 
 user_roles = Table(
     'user_roles', Base.metadata,
@@ -23,12 +19,6 @@ role_permissions = Table(
     Column('permission_id', Integer, ForeignKey('permissions.id', ondelete='CASCADE'))
 )
 
-notes_permissions = Table(
-    'notes_permissions', Base.metadata,
-    Column('note_id', Integer, ForeignKey('notes.id', ondelete='CASCADE')),
-    Column('user_id', PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'))
-)
-
 
 class User(Base):
     __tablename__ = 'users'
@@ -36,9 +26,9 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     hash_password = Column(String(255), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    roles = relationship('Role', secondary=user_roles, back_populates='users', cascade='all, delete')
+    roles = relationship('Role', secondary=user_roles, lazy="selectin", back_populates='users', cascade='all, delete')
     notes = relationship('Note', back_populates='user', cascade='all, delete-orphan')
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
 
     def principals(self):
@@ -68,6 +58,7 @@ class Note(Base):
     content = Column(String, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'))
+
     user = relationship('User', back_populates='notes')
     shares = relationship('NoteShare', back_populates='note', cascade='all, delete-orphan')
 

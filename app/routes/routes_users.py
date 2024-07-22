@@ -20,17 +20,32 @@ from app.crud.crud_users import (
 )
 from app.database import get_db
 from app.models import models
-from app.models.models import User
+from app.models.models import User, Role
 from app.shemas import UserCreate, UserOut, Token, TokenData, UserBase, EmailSchema
 from fastapi_mail import MessageSchema, FastMail
 from app.email_config import conf
+from sqlalchemy.future import select
+import aioredis
 
-# Create API router
 route_user = APIRouter(prefix="/auth", tags=["Authentication"])
+redis_url = "redis://redis:6379"
 
-# Define OAuth2 schemes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 http_bearer = HTTPBearer()
+
+
+async def get_redis():
+    return aioredis.from_url(redis_url)
+
+@route_user.get("/")
+async def read_root(redis: aioredis.Redis = Depends(get_redis)):
+    try:
+        await redis.set("key", "value")
+        value = await redis.get("key")
+        return {"message": f"Redis value: {value.decode('utf-8')}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Redis error: {e}")
+
 
 
 @route_user.post("/login", response_model=shemas.Token)
@@ -50,7 +65,6 @@ async def login_user(
     access_token_expires = timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
 
-    # Set the cookie without additional encoding
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -134,6 +148,18 @@ async def register_user(payload: UserCreate, background_tasks: BackgroundTasks, 
             detail=f"You have two different passwords"
         )
     created_user = await create_user(db, payload)
+
+    default_role = await db.execute(select(Role).filter_by(name="visitor"))
+    default_role = default_role.scalars().first()
+
+    if not default_role:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Default role not found"
+        )
+
+    created_user.roles.append(default_role)
+    await db.commit()
 
     token_data = {
         "sub": payload.email,

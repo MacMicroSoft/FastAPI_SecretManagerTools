@@ -97,3 +97,7 @@ class NoteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ResetToken(BaseModel):
+    reset_token: str

@@ -2,33 +2,33 @@ version: '3.10'
 
 services:
   fastapi:
-    volumes:
-      -
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - '80:80'
     depends_on:
-      - redis
       - db
+      - redis
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:2002182000@db:5432/postgres
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/postgres
+    volumes:
+      - .:/code
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80
 
   redis:
-    container_name: redis
     image: redis:6.2-alpine
     restart: always
     ports:
-      - '6379:6379'
+      - 6379:6379
     environment:
+      - REDIS_PASSWORD=12345
       - REDIS_PORT=6379
     volumes:
       - redis:/data
 
+
   db:
-    container_name: db
     image: postgres:12
     restart: always
     environment:
@@ -39,9 +39,21 @@ services:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+  alembic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/code
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/postgres
+    depends_on:
+      - db
+    entrypoint: ["alembic"]
+    command: ["revision", "--autogenerate", "-m", "test"]
 
 volumes:
-  redis:
-    driver: local
   pgdata:
+    driver: local
+  redis:
     driver: local
