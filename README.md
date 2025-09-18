@@ -38,17 +38,17 @@ A comprehensive, production-ready FastAPI application for secure note management
 ```
 FastAPI Secret Manager Tools/
 ├── app/
-│   ├── models/          # SQLAlchemy database models
-│   ├── routes/          # API route handlers
-│   ├── crud/           # Database operations
-│   ├── schemas/        # Pydantic data models
-│   ├── config.py       # Application configuration
-│   └── main.py         # FastAPI application entry point
-├── migrations/         # Alembic database migrations
-├── tests/             # Comprehensive test suite
-├── docker-compose.yml # Multi-service orchestration
-├── Dockerfile        # Container configuration
-└── requirements.txt  # Python dependencies
+│   ├── models/          
+│   ├── routes/          
+│   ├── crud/           
+│   ├── schemas/        
+│   ├── config.py      
+│   └── main.py         
+├── migrations/        
+├── tests/             
+├── docker-compose.yml
+├── Dockerfile        
+└── poetry            
 ```
 
 ## Quick Start
